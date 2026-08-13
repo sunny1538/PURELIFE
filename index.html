@@ -876,16 +876,18 @@
       extraBottles = 0;
       sessionId = w.id;
       screen = "app";
-      currentTab = "products";
+      currentTab = "account";
       showToast(method==="Online" ? "Payment successful. Package activated." : "Cash payment recorded. Package activated.");
       confettiBurst();
       renderScreen();
     }, 900);
   }
 
+  var reorderQty = 0;
+
   function renderProductsTab(w){
     var el = document.getElementById("tab-content");
-    if(w.status !== "Active" || w.products.length === 0){
+    if(w.status !== "Active"){
       el.innerHTML =
         '<div class="empty-box">'+
           '<i class="fa-solid fa-box"></i>'+
@@ -894,13 +896,73 @@
         '</div>';
       return;
     }
-    el.innerHTML = w.products.map(function(p,idx){
-      return '<div class="product-item" style="animation:cardEnter .4s ease both;animation-delay:'+(idx*0.06)+'s;">'+
-        '<div class="product-icon"><i class="fa-solid '+(p.icon||"fa-box")+'"></i></div>'+
-        '<div style="flex:1;min-width:0;"><p class="product-name">'+esc(p.name)+'</p><p class="product-qty">Quantity: '+p.qty+'</p></div>'+
-        '<span class="product-status">'+esc(p.status)+'</span>'+
-      '</div>';
-    }).join("");
+    reorderQty = 0;
+    var listHtml = w.products.length
+      ? w.products.map(function(p,idx){
+          return '<div class="product-item" style="animation:cardEnter .4s ease both;animation-delay:'+(idx*0.06)+'s;">'+
+            '<div class="product-icon"><i class="fa-solid '+(p.icon||"fa-box")+'"></i></div>'+
+            '<div style="flex:1;min-width:0;"><p class="product-name">'+esc(p.name)+'</p><p class="product-qty">Quantity: '+p.qty+'</p></div>'+
+            '<span class="product-status">'+esc(p.status)+'</span>'+
+          '</div>';
+        }).join("")
+      : '';
+    el.innerHTML = listHtml + reorderCardHtml();
+    wireReorderCard(w);
+  }
+
+  function reorderCardHtml(){
+    return ''+
+      '<p class="section-kicker">Order more bottles</p>'+
+      '<div class="plan-card">'+
+        serumBottleSvg()+
+        '<p class="plan-product-name">'+esc(INCLUDED_PRODUCT.name)+'</p>'+
+        '<p class="plan-product-desc">&#8377;'+BOTTLE_PRICE+' per bottle</p>'+
+      '</div>'+
+      '<div class="bottle-qty-card">'+
+        '<div><div class="bq-label">Bottles to order</div><div class="bq-sub">&#8377;'+BOTTLE_PRICE+' each</div></div>'+
+        '<div class="stepper">'+
+          '<button type="button" id="reorder-minus" disabled><i class="fa-solid fa-minus"></i></button>'+
+          '<span id="reorder-qty">0</span>'+
+          '<button type="button" id="reorder-plus"><i class="fa-solid fa-plus"></i></button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="total-row"><span class="t-label">Order Total</span><span class="t-value" id="reorder-total">&#8377;0</span></div>'+
+      '<button id="reorder-btn" class="btn btn-primary btn-between" style="margin-top:14px;" disabled><span><i class="fa-solid fa-cart-plus"></i> Order Now</span><span id="reorder-btn-amt">&#8377;0</span></button>';
+  }
+
+  function wireReorderCard(w){
+    function refresh(){
+      var total = reorderQty * BOTTLE_PRICE;
+      document.getElementById("reorder-qty").textContent = reorderQty;
+      document.getElementById("reorder-minus").disabled = reorderQty === 0;
+      document.getElementById("reorder-plus").disabled = reorderQty === MAX_EXTRA_BOTTLES;
+      document.getElementById("reorder-total").innerHTML = "&#8377;"+total;
+      document.getElementById("reorder-btn-amt").innerHTML = "&#8377;"+total;
+      document.getElementById("reorder-btn").disabled = reorderQty === 0;
+    }
+    document.getElementById("reorder-minus").onclick = function(){ reorderQty = Math.max(0, reorderQty - 1); refresh(); };
+    document.getElementById("reorder-plus").onclick = function(){ reorderQty = Math.min(MAX_EXTRA_BOTTLES, reorderQty + 1); refresh(); };
+    document.getElementById("reorder-btn").onclick = function(){ placeReorder(w); };
+    refresh();
+  }
+
+  function placeReorder(w){
+    if(reorderQty === 0) return;
+    var qty = reorderQty;
+    var btn = document.getElementById("reorder-btn");
+    var amtEl = document.getElementById("reorder-btn-amt");
+    document.getElementById("reorder-minus").disabled = true;
+    document.getElementById("reorder-plus").disabled = true;
+    btn.disabled = true;
+    amtEl.innerHTML = '<span class="spinner"></span>Placing order';
+
+    setTimeout(function(){
+      w.products.push({ name: INCLUDED_PRODUCT.name, qty: qty, status:"Processing", icon: INCLUDED_PRODUCT.icon });
+      reorderQty = 0;
+      showToast("Order placed for "+qty+" bottle"+(qty>1?"s":"")+".");
+      confettiBurst();
+      renderProductsTab(w);
+    }, 800);
   }
 
   /* ---------- ROUTER ---------- */
