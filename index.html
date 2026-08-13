@@ -886,9 +886,9 @@
 
       w.status = "Active";
       w.package = { total:total, method:method, extraBottles:bottlesBought };
-      w.products = [{ name: INCLUDED_PRODUCT.name, qty: INCLUDED_PRODUCT.qty, status:"Processing", icon: INCLUDED_PRODUCT.icon }];
+      w.products = [{ name: "Package", qty: 1, status:"Processing", icon: "fa-box" }];
       if(bottlesBought > 0){
-        w.products.push({ name: INCLUDED_PRODUCT.name+" (Extra)", qty: bottlesBought, status:"Processing", icon: INCLUDED_PRODUCT.icon });
+        w.products.push({ name: INCLUDED_PRODUCT.name, qty: bottlesBought, status:"Processing", icon: INCLUDED_PRODUCT.icon });
       }
 
       extraBottles = 0;
